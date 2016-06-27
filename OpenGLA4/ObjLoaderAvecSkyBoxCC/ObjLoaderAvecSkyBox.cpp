@@ -468,12 +468,16 @@ void Render()
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, g_Camera.viewMatrix.m);
 	glUniformMatrix4fv(worldLocation, 1, GL_FALSE, g_Objet.worldMatrix.m);
 
-	glBindTexture(GL_TEXTURE_2D, g_Objet.textureObj);
+	//glBindTexture(GL_TEXTURE_2D, g_Objet.textureObj);
 
 	glBindVertexArray(g_Objet.VAO);
-		
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, g_CubeMap.textureObj);
+
 	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, g_Objet.ElementCount, GL_UNSIGNED_INT, 0);
+
+	glBindVertexArray(0);
 
 	// Skybox 
 
@@ -494,6 +498,44 @@ void Render()
 	glDepthFunc(GL_LEQUAL);
 	glDrawArrays(GL_TRIANGLES, 0, 6*2*3); // 36
 	glActiveTexture(GL_TEXTURE0);
+
+
+	program = g_BasicShader.GetProgram();
+
+	// Create VBO with point coordinates
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+
+	GLfloat points[] = {
+		//  Coordinates     Color             Sides
+		-0.45f,  0.45f, 1.0f, 0.0f, 0.0f,  4.0f,
+		0.45f,  0.45f, 0.0f, 1.0f, 0.0f,  8.0f,
+		0.45f, -0.45f, 0.0f, 0.0f, 1.0f, 16.0f,
+		-0.45f, -0.45f, 1.0f, 1.0f, 0.0f, 32.0f
+	};
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+
+	// Create VAO
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	// Specify the layout of the vertex data
+	GLint posAttrib = glGetAttribLocation(program, "pos");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+	GLint colAttrib = glGetAttribLocation(program, "color");
+	glEnableVertexAttribArray(colAttrib);
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+
+	GLint sidesAttrib = glGetAttribLocation(program, "sides");
+	glEnableVertexAttribArray(sidesAttrib);
+	glVertexAttribPointer(sidesAttrib, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(5 * sizeof(GLfloat)));
+
+	glDrawArrays(GL_POINTS, 0, 4);
 
 	glutSwapBuffers();
 }

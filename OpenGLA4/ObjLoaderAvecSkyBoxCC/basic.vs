@@ -2,6 +2,15 @@
 
 #extension GL_ARB_explicit_attrib_location : enable
 
+
+in vec2 pos;
+in vec3 color;
+in float sides;
+
+out vec3 vColor;
+out float vSides;
+
+
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec2 a_texcoords;
@@ -39,4 +48,8 @@ void main(void)
 	OUT.v_texcoords = a_texcoords;
 	gl_Position = u_projectionMatrix * u_viewMatrix * worldPosition;
 
+
+	//gl_Position = vec4(pos, 0.0, 1.0);
+    vColor = color;
+    vSides = sides;
 }

@@ -35,7 +35,7 @@
 #include "stb/stb_image.h"
 
 #include "tinyobjloader/tiny_obj_loader.h"
-
+#include "dds.h"
 // ---
 
 struct vec3
@@ -84,6 +84,10 @@ static inline float radians(float deg) {
 
 static inline float degrees(float rad) {
 	return rad * 180.0f / M_PI;
+}
+
+uint32_t CalcMipMapSize(uint32_t w, uint32_t h) {
+	return ((w + 3) / 4) + ((h + 3) / 4) * sizeof(uint64_t);
 }
 
 mat4 perspectiveFov(float fov, float width, float height, float znear, float zfar)
@@ -135,11 +139,20 @@ bool LoadAndCreateTexture(const char* nom, GLuint& textureObj)
 	int w, h, comp;
 	int req_comp = 4;
 	auto* image = stbi_load(nom, &w, &h, &comp, req_comp);
+	//auto* image = LoadImageDDS(req_comp, w, h, nom);
 	if (image)
 	{
 		glGenTextures(1, &textureObj);
 		glBindTexture(GL_TEXTURE_2D, textureObj);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		//glCompressedTexImage2D(GL_TEXTURE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		int i = w;
+		while ( i > 1)
+		{
+			glCompressedTexImage2D(GL_TEXTURE_2D,  0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, w, h, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, image);
+			i /= 2;
+		}
+		
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 		stbi_image_free(image);
@@ -181,6 +194,7 @@ void DestroyTexture(GLuint textureObj)
 
 EsgiShader g_BasicShader;
 EsgiShader g_SkyBoxShader;
+EsgiShader g_GridShader;
 
 int previousTime = 0;
 
@@ -209,6 +223,7 @@ struct Objet
 
 Objet g_Objet;
 Objet g_CubeMap;
+Objet g_GridMap;
 
 // ---
 
@@ -248,6 +263,17 @@ void CreateCubeMap()
 	g_SkyBoxShader.LoadVertexShader("skybox.vs");
 	g_SkyBoxShader.LoadFragmentShader("skybox.fs");
 	g_SkyBoxShader.Create();
+}
+
+void CreateBackRectangle()
+{
+	static const float carre[] = {
+		-0.5f, 0.5f, 0.0f, 0.0f, // sommet 0
+		-0.5f, -0.5f, 0.0f, 1.0f, // sommet 1
+		0.5f, 0.5f, 1.0f, 0.0f, // sommet 2
+		0.5f, -0.5f, 1.0f, 1.0f // sommet 3
+	};
+	
 }
 
 void LoadOBJ(const std::string &inputFile)
@@ -387,6 +413,10 @@ void Initialize()
 	g_BasicShader.LoadGeometryShader("basic.gs");
 	g_BasicShader.Create();
 
+	//Grid
+	g_GridShader.LoadVertexShader("grid.vs");
+	g_GridShader.LoadFragmentShader("grid.fs");
+	g_GridShader.LoadGeometryShader("grid.gs");
 
 	auto program = g_BasicShader.GetProgram();
 
@@ -397,7 +427,11 @@ void Initialize()
 	const std::string inputFile = "rock.obj";
 	LoadOBJ(inputFile);
 
+	//A commenter
 	CreateCubeMap();
+
+	//Créer un rectangle qui fait toute la fenetre
+	
 }
 
 void Terminate()
@@ -494,6 +528,56 @@ void Render()
 	glDepthFunc(GL_LEQUAL);
 	glDrawArrays(GL_TRIANGLES, 0, 6*2*3); // 36
 	glActiveTexture(GL_TEXTURE0);
+
+	//Grid
+	
+	program = g_GridShader.GetProgram();
+	glUseProgram(program);
+	//g_GridMap.VAO = 
+	/*
+	glBindVertexArray(g_GridMap.VAO);
+	glDepthFunc(GL_LESS);
+	glDrawArrays(GL_POINTS, 0, 1);
+	//glDrawElements(GL_LINES, g_GridMap.ElementCount, GL_UNSIGNED_INT, 0);
+	*/
+
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+
+	GLfloat points[] = {
+		//  Coordinates             Color
+		-0.45f,  0.45f, -0.45f, 1.0f, 0.0f, 0.0f,
+		0.45f,  0.45f, -0.45f, 0.0f, 1.0f, 0.0f,
+		0.45f, -0.45f, -0.45f, 0.0f, 0.0f, 1.0f,
+		-0.45f, -0.45f, -0.45f, 1.0f, 1.0f, 0.0f,
+		-0.45f,  0.45f,  0.45f, 0.0f, 1.0f, 1.0f,
+		0.45f,  0.45f,  0.45f, 1.0f, 0.0f, 1.0f,
+		0.45f, -0.45f,  0.45f, 1.0f, 0.5f, 0.5f,
+		-0.45f, -0.45f,  0.45f, 0.5f, 1.0f, 0.5f,
+	};
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+
+	// Create VAO
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	// Specify layout of point data
+
+	GLint posAttrib = glGetAttribLocation(program, "pos");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+	GLint colAttrib = glGetAttribLocation(program, "color");
+	glEnableVertexAttribArray(colAttrib);
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+
+	GLint sidesAttrib = glGetAttribLocation(program, "sides");
+	glEnableVertexAttribArray(sidesAttrib);
+	glVertexAttribPointer(sidesAttrib, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(5 * sizeof(GLfloat)));
 
 	glutSwapBuffers();
 }

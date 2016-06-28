@@ -60,5 +60,14 @@
     <None Include="skybox.fs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="grid.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="grid.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="grid.gs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

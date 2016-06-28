@@ -96,6 +96,9 @@
     <None Include="basic.fs" />
     <None Include="basic.gs" />
     <None Include="basic.vs" />
+    <None Include="grid.fs" />
+    <None Include="grid.gs" />
+    <None Include="grid.vs" />
     <None Include="skybox.fs" />
     <None Include="skybox.vs" />
   </ItemGroup>

@@ -25,5 +25,7 @@ void main(void)
 	float NdotL = max(dot(L, N), 0.0);
 	vec4 Diffuse = vec4(vec3(NdotL), 1.0);
 
+	
+
     Fragment = Ambient + Diffuse;
 }

@@ -416,7 +416,8 @@ void Initialize()
 	//Grid
 	g_GridShader.LoadVertexShader("grid.vs");
 	g_GridShader.LoadFragmentShader("grid.fs");
-	g_GridShader.LoadGeometryShader("grid.gs");
+	//g_GridShader.LoadGeometryShader("grid.gs");
+	g_GridShader.Create();
 
 	auto program = g_BasicShader.GetProgram();
 
@@ -441,6 +442,7 @@ void Terminate()
 	CleanObjet(g_Objet);
 
 	g_BasicShader.Destroy();
+	g_GridShader.Destroy();
 }
 
 // boucle principale ---
@@ -530,6 +532,9 @@ void Render()
 	glActiveTexture(GL_TEXTURE0);
 
 	//Grid
+
+	//glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	program = g_GridShader.GetProgram();
 	glUseProgram(program);
@@ -541,24 +546,20 @@ void Render()
 	//glDrawElements(GL_LINES, g_GridMap.ElementCount, GL_UNSIGNED_INT, 0);
 	*/
 
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
+	//GLuint vbo;
+	//glGenBuffers(1, &vbo);
 
 	GLfloat points[] = {
 		//  Coordinates             Color
-		-0.45f,  0.45f, -0.45f, 1.0f, 0.0f, 0.0f,
-		0.45f,  0.45f, -0.45f, 0.0f, 1.0f, 0.0f,
-		0.45f, -0.45f, -0.45f, 0.0f, 0.0f, 1.0f,
-		-0.45f, -0.45f, -0.45f, 1.0f, 1.0f, 0.0f,
-		-0.45f,  0.45f,  0.45f, 0.0f, 1.0f, 1.0f,
-		0.45f,  0.45f,  0.45f, 1.0f, 0.0f, 1.0f,
-		0.45f, -0.45f,  0.45f, 1.0f, 0.5f, 0.5f,
-		-0.45f, -0.45f,  0.45f, 0.5f, 1.0f, 0.5f,
+		-1.45f,  1.45f, 5.f, 1.0f, 0.0f, 0.0f,  4.0f,
+		2.45f,  2.45f, -5.0f, 0.0f, 1.0f, 0.0f,  8.0f,
+		3.45f, -3.45f, -3.0f, 0.0f, 0.0f, 1.0f, 16.0f,
+		-0.45f, -0.45f, -5.0f, 1.0f, 1.0f, 0.0f, 32.0f
 	};
 
 
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+	//glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
 
 	// Create VAO
 	GLuint vao;
@@ -567,17 +568,26 @@ void Render()
 
 	// Specify layout of point data
 
-	GLint posAttrib = glGetAttribLocation(program, "pos");
+	projectionLocation = glGetUniformLocation(program, "u_projectionMatrix");
+	viewLocation = glGetUniformLocation(program, "u_viewMatrix");
+	worldLocation = glGetUniformLocation(program, "u_worldMatrix");
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, g_Camera.projectionMatrix.m);
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, g_Camera.viewMatrix.m);
+	glUniformMatrix4fv(worldLocation, 1, GL_FALSE, g_GridMap.worldMatrix.m);
+
+	GLint posAttrib = glGetAttribLocation(program, "a_position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), points);
 
-	GLint colAttrib = glGetAttribLocation(program, "color");
+	GLint colAttrib = glGetAttribLocation(program, "a_color");
 	glEnableVertexAttribArray(colAttrib);
-	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), points+3);
 
-	GLint sidesAttrib = glGetAttribLocation(program, "sides");
+	/*GLint sidesAttrib = glGetAttribLocation(program, "sides");
 	glEnableVertexAttribArray(sidesAttrib);
-	glVertexAttribPointer(sidesAttrib, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(5 * sizeof(GLfloat)));
+	glVertexAttribPointer(sidesAttrib, 1, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), points+6);*/
+
+	glDrawArrays(GL_TRIANGLES, 0, 4);
 
 	glutSwapBuffers();
 }

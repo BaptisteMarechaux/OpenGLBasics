@@ -43,6 +43,9 @@
     <ClInclude Include="EsgiShader.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="ObjLoaderAvecSkyBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="basic.fs">

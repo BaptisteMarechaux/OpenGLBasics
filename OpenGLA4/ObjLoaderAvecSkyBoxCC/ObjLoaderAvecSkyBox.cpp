@@ -33,10 +33,13 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#include "dds.h"
 
 #include "tinyobjloader/tiny_obj_loader.h"
 
 // ---
+
+GLuint textureID;
 
 struct vec3
 {
@@ -172,6 +175,83 @@ bool LoadAndCreateCubeMapTexture( const char * (&nom)[6], GLuint & textureObj)
 	return true;
 }
 
+inline uint32_t CalcMipmapSize(uint32_t w, uint32_t h) {
+	return ((w + 3) / 4)*((h + 3) / 4)*sizeof(uint64_t);
+}
+
+GLuint CreateTexture(const char* nom)
+{
+	uint32_t w, h;
+	uint8_t * image  = new uint8_t[0];
+	uint32_t sizeImage = LoadImageDDS(&image, w, h, nom);
+	if (sizeImage)
+	{
+		GLuint textureObj;
+		glGenTextures(1, &textureObj);
+		glBindTexture(GL_TEXTURE_2D, textureObj);
+		/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, w, h, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, image);
+		//LoadImageDDS
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		// Par defaut il utilise T qui attend une mipmap donc l'image sera noir
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+		for (auto index = 0; index < 6; index++)
+		{
+			auto* image = stbi_load(nom[index], &w, &h, &comp, req_comp);
+			if (image)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+				stbi_image_free(image);
+			}
+			else
+				return false;
+		}
+		*/
+
+		uint32_t nHeight = h;
+		uint32_t nWidth = w;
+
+		// Nombre de mips
+		int nNumMipMaps = 9;
+		//int nBlockSize = 8;
+
+		// A défnir avant
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		int nSize;
+		// Décallage dans la chaine de bits
+		int nOffset = 0;
+
+		for (int i = 0; i < nNumMipMaps; ++i)
+		{
+			if (nWidth == 0) nWidth = 1;
+			if (nHeight == 0) nHeight = 1;
+
+			nSize = CalcMipmapSize(nWidth, nHeight);
+			//nSize = ((nWidth + 3) / 4)*((nHeight + 3) / 4)*nBlockSize;
+
+			glCompressedTexImage2D(GL_TEXTURE_2D, i, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, nWidth, nHeight, 0 , nSize, image + nOffset);
+
+			nOffset += nSize;
+
+			nWidth = (nWidth / 2);
+			nHeight = (nHeight / 2);
+		}
+
+		FreeImageDDS(&image);
+
+		//Rendre actif sur l'unité de texture 0
+		//glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0); //Dessiner sans texture
+
+		return textureObj;
+	}
+	printf("Erreur DDS");
+	return 0;
+}
+
 void DestroyTexture(GLuint textureObj)
 {
 	glDeleteTextures(1, &textureObj);
@@ -223,6 +303,7 @@ void DestroyCubeMap()
 void CreateCubeMap()
 {
 	#include "skycube.h"
+#include "ObjLoaderAvecSkyBox.h"
 
 	glGenVertexArrays(1, &g_CubeMap.VAO);
 	glBindVertexArray(g_CubeMap.VAO);
@@ -398,6 +479,9 @@ void Initialize()
 	LoadOBJ(inputFile);
 
 	CreateCubeMap();
+
+	textureID = CreateTexture("mt.dds"); 
+	//textureID = CreateTexture("Rock-Texture-Surface.jpg");
 }
 
 void Terminate()
@@ -464,18 +548,27 @@ void Render()
 	auto projectionLocation = glGetUniformLocation(program, "u_projectionMatrix");
 	auto viewLocation = glGetUniformLocation(program, "u_viewMatrix");
 	auto worldLocation = glGetUniformLocation(program, "u_worldMatrix");
+	//auto a = glGetUniformLocation(program, "a");
+	//glUniform1i(a, 0);
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, g_Camera.projectionMatrix.m);
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, g_Camera.viewMatrix.m);
 	glUniformMatrix4fv(worldLocation, 1, GL_FALSE, g_Objet.worldMatrix.m);
 
+	glBindTexture(GL_TEXTURE_2D, textureID);
 	//glBindTexture(GL_TEXTURE_2D, g_Objet.textureObj);
 
 	glBindVertexArray(g_Objet.VAO);
 
-	glBindTexture(GL_TEXTURE_CUBE_MAP, g_CubeMap.textureObj);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, g_CubeMap.textureObj);
 
 	glDepthFunc(GL_LESS);
 	glDrawElements(GL_TRIANGLES, g_Objet.ElementCount, GL_UNSIGNED_INT, 0);
+
+	/*objet_position = vec3(4.0f, 0.0f, -3.0f);
+	g_Objet.worldMatrix.setPosition(objet_position);
+	glUniformMatrix4fv(worldLocation, 1, GL_FALSE, g_Objet.worldMatrix.m);
+	//glUniform1d(a, 1);
+	glDrawElements(GL_TRIANGLES, g_Objet.ElementCount, GL_UNSIGNED_INT, 0);*/
 
 	glBindVertexArray(0);
 

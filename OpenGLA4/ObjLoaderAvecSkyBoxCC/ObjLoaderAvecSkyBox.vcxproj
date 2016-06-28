@@ -89,6 +89,7 @@
   <ItemGroup>
     <ClInclude Include="dds.h" />
     <ClInclude Include="EsgiShader.h" />
+    <ClInclude Include="ObjLoaderAvecSkyBox.h" />
     <ClInclude Include="skycube.h" />
     <ClInclude Include="tinyobjloader\tiny_obj_loader.h" />
   </ItemGroup>

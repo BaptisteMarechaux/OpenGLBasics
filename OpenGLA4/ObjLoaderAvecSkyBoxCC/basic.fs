@@ -10,6 +10,8 @@ uniform sampler2D u_sampler;
 
 uniform samplerCube skybox;
 
+uniform int a;
+
 in VertexData {
     vec4 v_color;
     vec3 v_normal;
@@ -41,7 +43,11 @@ void main(void)
 	vec3 I = T;
     vec3 R = reflect(I, normalize(IN.v_normal));
 
-    Fragment = texture(skybox, R);//Diffuse * texColor /** vec4(fColor, 1.0)*/;
+	//if(a ==0){
+		//Fragment = texture(skybox, R);
+	//}else{
+		Fragment = /*Diffuse **/ texColor /** vec4(fColor, 1.0)*/;
+	//}
 
 
 }
